@@ -14,11 +14,15 @@ object FilterUtils {
         filterRules.forEach { item ->
             if (item.pattern.isNotEmpty()) {
                 if (item.isRegex) {
-                    AppLog.put("filter by regex. \nregex: `${item.pattern}` \nname: $name \nresult: ${name.contains(item.regex)}")
-                    if (name.contains(item.regex)) return true
+                    if (name.contains(item.regex)) {
+                        AppLog.put("filter by regex. \nregex: `${item.pattern}` \nname: $name \nresult: ${name.contains(item.regex)}")
+                        return true
+                    }
                 } else {
-                    AppLog.put("filter by string. \nstring: `${item.pattern}` \nname: $name \nresult: ${name.contains(item.pattern, ignoreCase = true)}")
-                    if (name.contains(item.pattern, ignoreCase = true)) return true
+                    if (name.contains(item.pattern, ignoreCase = true)) {
+                        AppLog.put("filter by string. \nstring: `${item.pattern}` \nname: $name \nresult: ${name.contains(item.pattern, ignoreCase = true)}")
+                        return true
+                    }
                 }
             }
         }
