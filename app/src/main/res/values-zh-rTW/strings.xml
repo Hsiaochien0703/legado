@@ -825,7 +825,6 @@
     <string name="import_bookshelf">匯入書單</string>
     <string name="pre_download">預下載</string>
     <string name="pre_download_m">预下载%s页</string>
-    <string name="single_page_scroller">单页滚动</string>
     <string name="pre_download_s">預先下載%s章正文</string>
     <string name="is_enabled">是否啟用</string>
     <string name="background_image">背景圖片</string>
@@ -1185,9 +1184,9 @@
     <string name="show_same_source">显示重复书源</string>
     <string name="theme_config">主题配置</string>
     <string name="show_manga_ui">漫画浏览</string>
-    <string name="disable_manga_scaling">禁用漫画缩放</string>
-    <string name="disable_manga_click_scroller">禁用点击翻页</string>
-    <string name="enable_auto_page_scroller">开启自动翻页</string>
+    <string name="disable_manga_scale">禁用漫画缩放</string>
+    <string name="disable_manga_click_scroll">禁用点击翻页</string>
+    <string name="enable_auto_page_scroll">开启自动翻页</string>
     <string name="manga_auto_page_speed">翻页速度 %s 秒</string>
     <string name="manga_footer_config">页脚配置</string>
     <string name="setting_manga_auto_page_speed">设置自动翻页速度</string>
@@ -1215,4 +1214,5 @@
     <string name="rule_invalid">规则为空或者不满足正则表达式要求</string>
     <string name="filter_rule_summary">过滤器规则名称</string>
     <string name="filter_rule">过滤器规则</string>
+    <string name="enable_manga_horizontal_scroll">水平滚动</string>
 </resources>
