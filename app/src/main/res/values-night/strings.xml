@@ -8,4 +8,5 @@
     <string name="rule_invalid">规则为空或者不满足正则表达式要求</string>
     <string name="filter_rule_summary">过滤器规则名称</string>
     <string name="filter_rule">过滤器规则</string>
+    <string name="import_filter_rule">导入过滤器规则</string>
 </resources>
