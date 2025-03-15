@@ -14,6 +14,7 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.DictRule
+import io.legado.app.data.entities.FilterRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
 import io.legado.app.data.entities.ReadRecord
@@ -135,6 +136,9 @@ object Restore {
                 val json = bookSourceFile.readText()
                 ImportOldData.importOldSource(json)
             }
+        }
+        fileToListT<FilterRule>(path, "filterRule.json")?.let {
+            appDb.filterRuleDao.insert(*it.toTypedArray())
         }
         fileToListT<RssSource>(path, "rssSources.json")?.let {
             appDb.rssSourceDao.insert(*it.toTypedArray())
