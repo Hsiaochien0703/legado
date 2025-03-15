@@ -1,5 +1,6 @@
 package io.legado.app.ui.filter
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -23,20 +24,28 @@ import io.legado.app.help.DirectLinkUpload
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
+import io.legado.app.ui.association.ImportFilterRuleDialog
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.filter.edit.FilterEditActivity
+import io.legado.app.ui.qrcode.QrCodeResult
 import io.legado.app.ui.widget.SelectActionBar
 import io.legado.app.ui.widget.recycler.DragSelectTouchHelper
 import io.legado.app.ui.widget.recycler.ItemTouchCallback
 import io.legado.app.ui.widget.recycler.VerticalDivider
+import io.legado.app.utils.ACache
 import io.legado.app.utils.GSON
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.hideSoftInput
 import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.launch
+import io.legado.app.utils.readText
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.shouldHideSoftInput
+import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.showHelp
+import io.legado.app.utils.splitNotBlank
+import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
@@ -85,6 +94,23 @@ class FilterRuleActivity : VMBaseActivity<ActivityFilterRuleBinding, FilterRuleV
                     sendToClip(uri.toString())
                 }
             }
+        }
+    }
+    private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
+        it ?: return@registerForActivityResult
+        showDialogFragment(
+            ImportFilterRuleDialog(it)
+        )
+    }
+    private val importDoc = registerForActivityResult(HandleFileContract()) {
+        kotlin.runCatching {
+            it.uri?.readText(this)?.let {
+                showDialogFragment(
+                    ImportFilterRuleDialog(it)
+                )
+            }
+        }.onFailure {
+            toastOnUi("readTextError:${it.localizedMessage}")
         }
     }
 
@@ -198,7 +224,12 @@ class FilterRuleActivity : VMBaseActivity<ActivityFilterRuleBinding, FilterRuleV
             R.id.menu_add_filter_rule ->
                 editActivity.launch(FilterEditActivity.startIntent(this))
             R.id.menu_del_selection -> viewModel.delSelection(adapter.selection)
-
+            R.id.menu_import_onLine -> showImportDialog()
+            R.id.menu_import_local -> importDoc.launch {
+                mode = HandleFileContract.FILE
+                allowExtensions = arrayOf("txt", "json")
+            }
+            R.id.menu_import_qr -> qrCodeResult.launch()
             R.id.menu_help -> showHelp("filterRuleHelp")
         }
         return super.onCompatOptionsItemSelected(item)
@@ -270,5 +301,38 @@ class FilterRuleActivity : VMBaseActivity<ActivityFilterRuleBinding, FilterRuleV
     override fun upOrder() {
         setResult(RESULT_OK)
         viewModel.upOrder()
+    }
+
+    @SuppressLint("InflateParams")
+    private fun showImportDialog() {
+        val aCache = ACache.get(cacheDir = false)
+        val cacheUrls: MutableList<String> = aCache
+            .getAsString(importRecordKey)
+            ?.splitNotBlank(",")
+            ?.toMutableList() ?: mutableListOf()
+        alert(titleResource = R.string.import_on_line) {
+            val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
+                editView.hint = "url"
+                editView.setFilterValues(cacheUrls)
+                editView.delCallBack = {
+                    cacheUrls.remove(it)
+                    aCache.put(importRecordKey, cacheUrls.joinToString(","))
+                }
+            }
+            customView { alertBinding.root }
+            okButton {
+                val text = alertBinding.editView.text?.toString()
+                text?.let {
+                    if (it.isAbsUrl() && !cacheUrls.contains(it)) {
+                        cacheUrls.add(0, it)
+                        aCache.put(importRecordKey, cacheUrls.joinToString(","))
+                    }
+                    showDialogFragment(
+                        ImportFilterRuleDialog(it)
+                    )
+                }
+            }
+            cancelButton()
+        }
     }
 }
