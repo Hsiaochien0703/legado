@@ -53,6 +53,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -202,7 +203,14 @@ class FilterRuleActivity : VMBaseActivity<ActivityFilterRuleBinding, FilterRuleV
                 searchKey.isNullOrEmpty() -> {
                     appDb.filterRuleDao.flowAll()
                 }
-
+                searchKey.startsWith("re:") -> {
+                    val key = searchKey.removePrefix("re:")
+                    appDb.filterRuleDao.flowAll().mapLatest { rules ->
+                        rules.filter {
+                            it.pattern.contains(key.toRegex())
+                        }
+                    }
+                }
                 else -> {
                     appDb.filterRuleDao.flowSearch("%$searchKey%")
                 }
