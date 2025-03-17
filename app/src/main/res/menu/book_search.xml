@@ -4,6 +4,12 @@
     tools:ignore="AlwaysShowAction">
 
     <item
+        android:id="@+id/menu_use_filter"
+        android:checkable="true"
+        android:title="@string/use_filter"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_precision_search"
         android:checkable="true"
         android:title="@string/precision_search"

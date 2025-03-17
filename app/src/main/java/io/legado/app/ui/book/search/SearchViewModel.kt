@@ -17,8 +17,11 @@ import io.legado.app.utils.ConflateLiveData
 import io.legado.app.utils.FilterUtils
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ConcurrentHashMap
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -26,7 +29,7 @@ class SearchViewModel(application: Application) : BaseViewModel(application) {
     val handler = Handler(Looper.getMainLooper())
     val bookshelf: MutableSet<String> = ConcurrentHashMap.newKeySet()
     val upAdapterLiveData = MutableLiveData<String>()
-    var searchBookLiveData = ConflateLiveData<List<SearchBook>>(1000)
+    var searchBookLiveData = ConflateLiveData<Pair<List<SearchBook>, List<SearchBook>>>(1000)
     val searchScope: SearchScope = SearchScope(AppConfig.searchScope)
     var searchFinishLiveData = MutableLiveData<Boolean>()
     var isSearchLiveData = MutableLiveData<Boolean>()
@@ -43,8 +46,8 @@ class SearchViewModel(application: Application) : BaseViewModel(application) {
             isSearchLiveData.postValue(true)
         }
 
-        override fun onSearchSuccess(searchBooks: List<SearchBook>) {
-            searchBookLiveData.postValue(searchBooks)
+        override fun onSearchSuccess(searchBooks: List<SearchBook>, filterBooks: List<SearchBook>) {
+            searchBookLiveData.postValue(searchBooks to filterBooks)
         }
 
         override fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean) {
@@ -101,7 +104,7 @@ class SearchViewModel(application: Application) : BaseViewModel(application) {
             if ((searchKey == key) || key.isNotEmpty()) {
                 searchModel.cancelSearch()
                 searchID = System.currentTimeMillis()
-                searchBookLiveData.postValue(emptyList())
+                searchBookLiveData.postValue(emptyList<SearchBook>() to emptyList())
                 searchKey = key
                 hasMore = true
             }

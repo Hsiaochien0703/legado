@@ -1216,4 +1216,5 @@
     <string name="manga_color_filter">滤镜</string>
     <string name="import_filter_rule">导入过滤器规则</string>
     <string name="share_filter_rule">分享过滤器规则</string>
+    <string name="use_filter">Usar filtros</string>
 </resources>

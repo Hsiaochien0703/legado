@@ -491,6 +491,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val updateToVariant get() = appCtx.getPrefString(PreferKey.updateToVariant, "default_version")
 
+//    var useFilter
+//        get() = appCtx.getPrefBoolean(PreferKey.useFilter, true)
+//        set(value) = appCtx.putPrefBoolean(PreferKey.useFilter, value)
+
     val streamReadAloudAudio get() = appCtx.getPrefBoolean(PreferKey.streamReadAloudAudio, false)
 
     val doublePageHorizontal: String?

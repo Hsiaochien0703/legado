@@ -22,6 +22,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.databinding.ActivityBookSearchBinding
 import io.legado.app.lib.dialogs.alert
@@ -29,10 +30,12 @@ import io.legado.app.lib.theme.Selector
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.lib.theme.primaryDisabledTextColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
+import io.legado.app.ui.widget.text.BadgeView
 import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.applyNavigationBarMargin
 import io.legado.app.utils.applyNavigationBarPadding
@@ -44,6 +47,7 @@ import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
+import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
@@ -79,11 +83,15 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
     private val searchView: SearchView by lazy {
         binding.titleBar.findViewById(R.id.search_view)
     }
+    private val filterView: BadgeView by lazy {
+        binding.titleBar.findViewById(R.id.badge_view)
+    }
     private var menu: Menu? = null
     private var groups: List<String>? = null
     private var historyFlowJob: Job? = null
     private var booksFlowJob: Job? = null
     private var precisionSearchMenuItem: MenuItem? = null
+    private var useFilterMenuItem: MenuItem? = null
     private var isManualStopSearch = false
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -105,6 +113,10 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
         this.menu = menu
         precisionSearchMenuItem = menu.findItem(R.id.menu_precision_search)
         precisionSearchMenuItem?.isChecked = getPrefBoolean(PreferKey.precisionSearch)
+        useFilterMenuItem = menu.findItem(R.id.menu_use_filter)
+        val useFilter = getPrefBoolean(PreferKey.useFilter)
+        useFilterMenuItem?.isChecked = useFilter
+        upFilter(useFilter)
         return super.onCompatCreateOptionsMenu(menu)
     }
 
@@ -148,6 +160,10 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
 
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.menu_use_filter ->{
+                val newKey = !getPrefBoolean(PreferKey.useFilter)
+                upFilter(newKey)
+            }
             R.id.menu_precision_search -> {
                 putPrefBoolean(
                     PreferKey.precisionSearch,
@@ -276,6 +292,19 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
             }
         }
         binding.tvClearHistory.setOnClickListener { alertClearHistory() }
+        filterView.setOnLongClickListener {
+            val newState = !getPrefBoolean(PreferKey.useFilter)
+            if (newState){
+                toastOnUi("已启用过滤功能")
+            }else{
+                toastOnUi("已停用过滤功能")
+            }
+            upFilter(newState)
+            true
+        }
+        filterView.setOnClickListener {
+            toastOnUi("打开过滤列表未实现")
+        }
     }
 
     private fun initData() {
@@ -293,8 +322,9 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
                 searchFinally()
             }
         }
-        viewModel.searchBookLiveData.observe(this) {
-            adapter.setItems(it)
+        viewModel.searchBookLiveData.observe(this){
+            val (searchs,filters) = it
+            upFilter(searchs,filters)
         }
         lifecycleScope.launch {
             appDb.bookSourceDao.flowEnabledGroups().collect {
@@ -342,8 +372,15 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
         if (visible) {
             upHistory(searchView.query.toString())
             binding.llInputHelp.visibility = VISIBLE
+            filterView.visibility = GONE
         } else {
             binding.llInputHelp.visibility = GONE
+            filterView.visibility = VISIBLE
+            filterView.visibility = if(filterView.badgeCount != null && filterView.badgeCount!! > 0){
+                VISIBLE
+            }else{
+                GONE
+            }
         }
     }
 
@@ -387,6 +424,38 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
         }
     }
 
+    private fun upFilter(newState:Boolean){
+        putPrefBoolean(
+            PreferKey.useFilter,
+            newState
+        )
+        useFilterMenuItem?.isChecked = newState
+        val (searchItems,filterItems) = viewModel.searchBookLiveData.value ?: return
+        upFilter(newState,searchItems, filterItems)
+    }
+
+    private fun upFilter(searchItems:List<SearchBook>,filterItems:List<SearchBook>){
+        val newKey = getPrefBoolean(PreferKey.useFilter)
+        upFilter(newKey,searchItems, filterItems)
+    }
+
+    private fun upFilter(newState:Boolean,searchItems:List<SearchBook>,filterItems:List<SearchBook>){
+        filterView.setBadgeCount(filterItems.size)
+        filterView.visibility = if(filterItems.isNotEmpty()){
+            VISIBLE
+        }else{
+            GONE
+        }
+        if (newState){
+            filterView.setBackgroundColor(accentColor)
+            adapter.setItems(searchItems)
+        }else{
+            filterView.setBackgroundColor(primaryDisabledTextColor)
+            val all = searchItems + filterItems
+            adapter.setItems(all)
+        }
+    }
+
     /**
      * 开始搜索
      */
@@ -410,12 +479,22 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
         }
     }
 
+    private fun isAdapterEmpty(): Boolean {
+        val useFilter = getPrefBoolean(PreferKey.useFilter)
+        val (searchItems,filterItems) = viewModel.searchBookLiveData.value ?: return false
+        return if (useFilter){
+            searchItems.isNotEmpty() || filterItems.isNotEmpty()
+        }else{
+             searchItems.isNotEmpty()
+        }
+    }
+
     override fun observeLiveBus() {
         viewModel.upAdapterLiveData.observe(this) {
             adapter.notifyItemRangeChanged(0, adapter.itemCount, bundleOf(it to null))
         }
         viewModel.searchFinishLiveData.observe(this) { isEmpty ->
-            if (!isEmpty || viewModel.searchScope.isAll()) return@observe
+            if (!isEmpty || !isAdapterEmpty() || viewModel.searchScope.isAll()) return@observe
             alert("搜索结果为空") {
                 val precisionSearch = appCtx.getPrefBoolean(PreferKey.precisionSearch)
                 val displayScope = viewModel.searchScope.display

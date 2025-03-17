@@ -9,6 +9,7 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.book.search.SearchScope
+import io.legado.app.utils.FileDocFilter
 import io.legado.app.utils.FilterUtils
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.mapParallelSafe
@@ -39,6 +40,7 @@ class SearchModel(private val scope: CoroutineScope, private val callBack: CallB
     private var searchKey: String = ""
     private var bookSourceParts = emptyList<BookSourcePart>()
     private var searchBooks = arrayListOf<SearchBook>()
+    private var filterBooks = arrayListOf<SearchBook>()
     private var searchJob: Job? = null
 
 
@@ -89,15 +91,18 @@ class SearchModel(private val scope: CoroutineScope, private val callBack: CallB
                     WebBook.searchBookAwait(it, searchKey, searchPage)
                 }
             }.onEach { items ->
-                val titems = filter(items)
+                val pair = partition(items)
+                val filter = pair.first
+                val titems = pair.second
                 for (book in titems) {
                     book.releaseHtmlData()
                 }
                 hasMore = hasMore || titems.isNotEmpty()
                 appDb.searchBookDao.insert(*titems.toTypedArray())
-                mergeItems(titems, precision)
+                mergeFilterItems(filter,precision)
+                mergeSearchItems(titems, precision)
                 currentCoroutineContext().ensureActive()
-                callBack.onSearchSuccess(searchBooks)
+                callBack.onSearchSuccess(searchBooks,filterBooks)
             }.onCompletion {
                 if (it == null) callBack.onSearchFinish(searchBooks.isEmpty(), hasMore)
             }.catch {
@@ -106,76 +111,73 @@ class SearchModel(private val scope: CoroutineScope, private val callBack: CallB
         }
     }
 
-    private suspend fun mergeItems(newDataS: List<SearchBook>, precision: Boolean) {
-        if (newDataS.isNotEmpty()) {
-            var copyData = ArrayList(searchBooks)
-            val equalData = arrayListOf<SearchBook>()
-            val containsData = arrayListOf<SearchBook>()
-            val otherData = arrayListOf<SearchBook>()
-            //copyData = filter(copyData)
-            copyData.forEach {
-                coroutineContext.ensureActive()
-                if (it.name == searchKey || it.author == searchKey) {
-                    equalData.add(it)
-                } else if (it.name.contains(searchKey) || it.author.contains(searchKey)) {
-                    containsData.add(it)
-                } else {
-                    otherData.add(it)
-                }
-            }
-            newDataS.forEach { nBook ->
-                coroutineContext.ensureActive()
-                if (nBook.name == searchKey || nBook.author == searchKey) {
-                    var hasSame = false
-                    equalData.forEach { pBook ->
-                        coroutineContext.ensureActive()
-                        if (pBook.name == nBook.name && pBook.author == nBook.author) {
-                            pBook.addOrigin(nBook.origin)
-                            hasSame = true
-                        }
-                    }
-                    if (!hasSame) {
-                        equalData.add(nBook)
-                    }
-                } else if (nBook.name.contains(searchKey) || nBook.author.contains(searchKey)) {
-                    var hasSame = false
-                    containsData.forEach { pBook ->
-                        coroutineContext.ensureActive()
-                        if (pBook.name == nBook.name && pBook.author == nBook.author) {
-                            pBook.addOrigin(nBook.origin)
-                            hasSame = true
-                        }
-                    }
-                    if (!hasSame) {
-                        containsData.add(nBook)
-                    }
-                } else if (!precision) {
-                    var hasSame = false
-                    otherData.forEach { pBook ->
-                        coroutineContext.ensureActive()
-                        if (pBook.name == nBook.name && pBook.author == nBook.author) {
-                            pBook.addOrigin(nBook.origin)
-                            hasSame = true
-                        }
-                    }
-                    if (!hasSame) {
-                        otherData.add(nBook)
-                    }
-                }
-            }
+    private suspend inline fun addCondition(list: ArrayList<SearchBook>, searchBook: SearchBook){
+        var hasSame = false
+        list.forEach { book ->
             coroutineContext.ensureActive()
-            equalData.sortByDescending { it.origins.size }
-            equalData.addAll(containsData.sortedByDescending { it.origins.size })
-            if (!precision) {
-                equalData.addAll(otherData)
+            if (book.name == searchBook.name && book.author == searchBook.author) {
+                book.addOrigin(searchBook.origin)
+                hasSame = true
             }
-            coroutineContext.ensureActive()
-            searchBooks = equalData
+        }
+        if (!hasSame) {
+            list.add(searchBook)
         }
     }
 
-    private fun filter(lsearchBooks: ArrayList<SearchBook>): ArrayList<SearchBook> {
-        return lsearchBooks.filterNot { FilterUtils.test(it.name) } as ArrayList<SearchBook>
+    private suspend fun mergeSearchItems(newDataS: List<SearchBook>, precision: Boolean){
+        val items = mergeItemsR(searchBooks,newDataS,precision)
+        if (items != null){
+            searchBooks = items
+        }
+    }
+
+    private suspend fun mergeFilterItems(newDataS: List<SearchBook>, precision: Boolean){
+        val items = mergeItemsR(filterBooks,newDataS,precision)
+        if (items != null){
+            filterBooks = items
+        }
+    }
+
+
+    private suspend fun mergeItemsR(list: ArrayList<SearchBook>,newDataS: List<SearchBook>, precision: Boolean): ArrayList<SearchBook>? {
+        if (newDataS.isEmpty()) return null
+        val copyData = ArrayList(list)
+        val equalData = arrayListOf<SearchBook>()
+        val containsData = arrayListOf<SearchBook>()
+        val otherData = arrayListOf<SearchBook>()
+        copyData.forEach {
+            coroutineContext.ensureActive()
+            if (it.name == searchKey || it.author == searchKey) {
+                equalData.add(it)
+            } else if (it.name.contains(searchKey) || it.author.contains(searchKey)) {
+                containsData.add(it)
+            } else {
+                otherData.add(it)
+            }
+        }
+        newDataS.forEach { nBook ->
+            coroutineContext.ensureActive()
+            if (nBook.name == searchKey || nBook.author == searchKey) {
+                addCondition(equalData, nBook)
+            } else if (nBook.name.contains(searchKey) || nBook.author.contains(searchKey)) {
+                addCondition(containsData, nBook)
+            } else if (!precision) {
+                addCondition(containsData, nBook)
+            }
+        }
+        coroutineContext.ensureActive()
+        equalData.sortByDescending { it.origins.size }
+        equalData.addAll(containsData.sortedByDescending { it.origins.size })
+        if (!precision) {
+            equalData.addAll(otherData)
+        }
+        coroutineContext.ensureActive()
+        return equalData
+    }
+
+    private fun partition(lsearchBooks: ArrayList<SearchBook>): Pair<List<SearchBook>, List<SearchBook>> {
+        return lsearchBooks.partition { FilterUtils.test(it.name) }
     }
 
     fun cancelSearch() {
@@ -193,7 +195,7 @@ class SearchModel(private val scope: CoroutineScope, private val callBack: CallB
     interface CallBack {
         fun getSearchScope(): SearchScope
         fun onSearchStart()
-        fun onSearchSuccess(searchBooks: List<SearchBook>)
+        fun onSearchSuccess(searchBooks: List<SearchBook>,filterBooks:List<SearchBook>)
         fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean)
         fun onSearchCancel(exception: Throwable? = null)
     }
