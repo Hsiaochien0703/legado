@@ -1,6 +1,7 @@
 package io.legado.app.ui.filter
 
 import android.app.Application
+import android.content.Intent
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.FilterRule
@@ -10,11 +11,26 @@ import io.legado.app.data.entities.FilterRule
  */
 class FilterRuleViewModel(application: Application) : BaseViewModel(application) {
 
-    fun initData(onSuccess: (List<FilterRule>) -> Unit) {
+    var rule: FilterRule? = null
+
+    fun initData(intent: Intent, finally: (filterRule: FilterRule) -> Unit) {
         execute {
-            appDb.filterRuleDao.enabled
+            val id = intent.getLongExtra("id", -1)
+            rule = if (id > 0) {
+                appDb.filterRuleDao.findById(id)
+            } else {
+                val pattern = intent.getStringExtra("pattern") ?: ""
+                val isRegex = intent.getBooleanExtra("isRegex", false)
+                FilterRule(
+                    name = pattern,
+                    pattern = pattern,
+                    isRegex = isRegex,
+                )
+            }
         }.onSuccess {
-            onSuccess.invoke(it)
+            rule?.let {
+                finally(it)
+            }
         }
     }
 

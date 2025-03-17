@@ -118,7 +118,7 @@ class FilterRuleActivity : VMBaseActivity<ActivityFilterRuleBinding, FilterRuleV
         initRecyclerView()
         initSearchView()
         initSelectActionView()
-        viewModel.initData {
+        viewModel.initData(intent) {
             observeFilterRuleData()
         }
     }
