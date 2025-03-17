@@ -1,27 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android"
     tools:ignore="AlwaysShowAction">
 
     <item
         android:id="@+id/menu_save"
         android:icon="@drawable/ic_save"
-        android:showAsAction="always"
+        app:showAsAction="always"
         android:title="@string/action_save" />
 
     <item
         android:id="@+id/menu_copy_rule"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/copy_rule" />
 
     <item
         android:id="@+id/menu_paste_rule"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/paste_rule" />
 
     <item
         android:id="@+id/menu_share_qr"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/qr_share" />
 
 </menu>

@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
     <item
         android:id="@+id/menu_group"
         android:icon="@drawable/ic_groups"
-        android:showAsAction="always"
+        app:showAsAction="always"
         android:title="@string/menu_action_group"
         tools:ignore="AlwaysShowAction">
 
@@ -30,31 +31,31 @@
     <item
         android:id="@+id/menu_add_filter_rule"
         android:icon="@drawable/ic_add"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/add_filter_rule" />
 
     <item
         android:id="@+id/menu_import_local"
         android:icon="@drawable/ic_import"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/import_local" />
 
     <item
         android:id="@+id/menu_import_onLine"
         android:icon="@drawable/ic_import"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/import_on_line" />
 
     <item
         android:id="@+id/menu_import_qr"
         android:icon="@drawable/ic_import"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/import_by_qr_code" />
 
     <item
         android:id="@+id/menu_help"
         android:icon="@drawable/ic_help"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/help" />
 
 </menu>
