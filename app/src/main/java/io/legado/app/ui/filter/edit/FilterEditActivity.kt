@@ -10,6 +10,7 @@ import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.data.entities.FilterRule
@@ -19,6 +20,7 @@ import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 import io.legado.app.utils.GSON
 import io.legado.app.utils.imeHeight
 import io.legado.app.utils.sendToClip
+import io.legado.app.utils.shareWithQr
 import io.legado.app.utils.showHelp
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
@@ -77,6 +79,11 @@ class FilterEditActivity :
             R.id.menu_paste_rule -> viewModel.pasteRule {
                 upFilterView(it)
             }
+            R.id.menu_share_qr -> shareWithQr(
+                GSON.toJson(getFilterRule()),
+                getString(R.string.share_filter_rule),
+                ErrorCorrectionLevel.L
+            )
         }
         return true
     }
